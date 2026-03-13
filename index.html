@@ -3,97 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 Dashboard</title>
+    <title>Cold Storage Monitoring - Production 1</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
+        body { font-family: 'Inter', sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto 20px auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        h3 { margin-top: 0; color: #333; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        #loader { text-align: center; font-weight: bold; color: #1a2a6c; margin: 20px; }
+        h2 { margin: 0; font-size: 22px; }
+        .loading { text-align: center; font-weight: bold; color: #1a2a6c; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="card">
     <div class="header">
-        <h2 style="margin:0;">DAILY ACTIVITY MONITORING</h2>
-        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+        <h2>DAILY ACTIVITY MONITORING</h2>
+        <p style="margin: 5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
+    <div id="loader" class="loading">Menghubungkan ke Database...</div>
+    <canvas id="chartSuhu"></canvas>
+</div>
 
-    <div id="loader">Menghubungkan ke Cold Storage...</div>
-
-    <div class="card">
-        <h3>Average Temperature Monitoring (Kolom A & B)</h3>
-        <canvas id="chartSuhu"></canvas>
-    </div>
-
-    <div class="card">
-        <h3>HM Monitoring (Kolom A & B)</h3>
-        <canvas id="chartHM"></canvas>
-    </div>
+<div class="card">
+    <h3>Hour Meter (HM) Monitoring</h3>
+    <canvas id="chartHM"></canvas>
 </div>
 
 <script>
     // URL API TERBARU ANDA
-    const apiURL = "https://script.google.com/macros/s/AKfycbz3f0Djh8GLR8UhXp1XaheGnYZFiWL5wvo8NVIHOE5ZoVt7pqSAE_CbgN692qvoGOfIKg/exec";
+    const apiURL = "https://script.google.com/macros/s/AKfycbx8zA7oTztaAwm-o1jtecDFbwiovftMBsSxatcQiPdw6uNiNvPyMThTgOedRxi0OHj6FA/exec";
 
     async function loadData() {
         try {
             const response = await fetch(apiURL);
-            const allData = await response.json();
+            const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // 1. Proses Tab Average Temp
-            const keyTemp = Object.keys(allData).find(k => k.trim().toLowerCase() === "average temp");
-            const dataTemp = allData[keyTemp].slice(-10); // 10 baris terakhir
+            // 1. Ambil data Tab Average Temp
+            const keyTemp = Object.keys(data).find(k => k.trim() === "Average Temp");
+            const rawTemp = data[keyTemp].slice(-7); // 7 hari terakhir
 
-            renderChart('chartSuhu', 
-                dataTemp.map(d => Object.values(d)[0]), // Ambil Kolom A (Tanggal)
-                dataTemp.map(d => Object.values(d)[1]), // Ambil Kolom B (Suhu)
-                'Suhu (°C)', '#e74c3c');
+            new Chart(document.getElementById('chartSuhu'), {
+                type: 'line',
+                data: {
+                    labels: rawTemp.map(d => {
+                        let tgl = Object.values(d)[0];
+                        return typeof tgl === 'string' ? tgl.split('T')[0] : tgl;
+                    }),
+                    datasets: [{
+                        label: 'Average Temp (°C)',
+                        data: rawTemp.map(d => Object.values(d)[1]),
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                }
+            });
 
-            // 2. Proses Tab HM & Ampere Average
-            const keyHM = Object.keys(allData).find(k => k.trim().toLowerCase() === "hm & ampere average");
-            const dataHM = allData[keyHM].slice(-10);
+            // 2. Ambil data Tab HM & Ampere Average
+            const keyHM = Object.keys(data).find(k => k.trim() === "HM & Ampere Average");
+            const rawHM = data[keyHM].slice(-7);
 
-            renderChart('chartHM', 
-                dataHM.map(d => Object.values(d)[0]), // Ambil Kolom A (Tanggal)
-                dataHM.map(d => Object.values(d)[1]), // Ambil Kolom B (HM)
-                'Hour Meter (HM)', '#3498db');
+            new Chart(document.getElementById('chartHM'), {
+                type: 'line',
+                data: {
+                    labels: rawHM.map(d => {
+                        let tgl = Object.values(d)[0];
+                        return typeof tgl === 'string' ? tgl.split('T')[0] : tgl;
+                    }),
+                    datasets: [{
+                        label: 'Running Hours (HM)',
+                        data: rawHM.map(d => Object.values(d)[1]),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                }
+            });
 
-        } catch (error) {
-            document.getElementById('loader').innerHTML = "❌ Gagal Ambil Data. Cek Izin 'Anyone' di Apps Script!";
-            console.error(error);
+        } catch (e) {
+            document.getElementById('loader').innerText = "Koneksi Gagal. Cek kembali Deploy Apps Script Anda.";
         }
     }
-
-    function renderChart(id, labels, values, title, color) {
-        new Chart(document.getElementById(id), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: values,
-                    borderColor: color,
-                    backgroundColor: color + '11',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 3,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: false }
-                }
-            }
-        });
-    }
-
     loadData();
 </script>
 </body>
