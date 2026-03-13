@@ -1,103 +1,51 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Production 1 - Cold Storage Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-body { font-family: 'Inter', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-.header { text-align: center; margin-bottom: 30px; background: #1a2a6c; color: white; padding: 20px; border-radius: 10px; }
-.grid-container {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-gap: 20px;
-max-width: 1300px;
-margin: auto;
-}
-.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-h3 { margin-top: 0; color: #333; border-left: 5px solid #f39c12; padding-left: 10px; }
-.status { text-align: center; padding: 10px; font-weight: bold; }
-</style>
+    <title>Monitoring Cold Storage</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+        .data-box { border: 1px solid #0f0; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        h2 { color: #fff; border-bottom: 1px solid #555; }
+        .val { font-size: 20px; font-weight: bold; color: #ffeb3b; }
+    </style>
 </head>
 <body>
+    <h2>LOG DATA PRODUCTION 1 - M RIVALDI EKA SATRIA</h2>
+    <div id="status">Status: Menghubungkan...</div>
+    <div id="output"></div>
 
-<div class="header">
-<h1 style="margin:0;">DAILY ACTIVITY MONITORING</h1>
-<p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PT ANEKA TUNA INDONESIA</p>
-</div>
+    <script>
+        const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
 
-<div id="status-loading" class="status">Sedang menghubungkan ke Google Sheets...</div>
+        async function getLog() {
+            try {
+                const res = await fetch(apiURL);
+                const data = await res.json();
+                document.getElementById('status').innerHTML = "Status: Terhubung (Real-time)";
+                
+                let html = "";
+                
+                // Ambil 5 data terakhir dari tab Average Temp
+                const tempLogs = data["Average Temp"].slice(-5).reverse();
+                html += "<h3>--- 5 LOG SUHU TERAKHIR ---</h3>";
+                tempLogs.forEach(log => {
+                    html += `<div class="data-box">TANGGAL: ${log.Tanggal} | <span class="val">SUHU: ${log.Suhu}°C</span></div>`;
+                });
 
-<div class="grid-container">
-<div class="card">
-<h3>Average Temperature (°C)</h3>
-<canvas id="chartSuhu"></canvas>
-</div>
+                // Ambil 5 data terakhir dari tab HM
+                const hmLogs = data["HM & Ampere Average"].slice(-5).reverse();
+                html += "<h3>--- 5 LOG HM & AMPERE TERAKHIR ---</h3>";
+                hmLogs.forEach(log => {
+                    html += `<div class="data-box">TANGGAL: ${log.Tanggal} | HM: ${log.HM} | AMP: ${log.Ampere}</div>`;
+                });
 
-<div class="card">
-<h3>Hour Meter (HM) Monitoring</h3>
-<canvas id="chartHM"></canvas>
-</div>
-
-<div class="card">
-<h3>Average Ampere</h3>
-<canvas id="chartAmpere"></canvas>
-</div>
-</div>
-
-<script>
-// URL API yang baru saja Anda buat
-const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
-
-async function updateDashboard() {
-try {
-const response = await fetch(apiURL);
-const allData = await response.json();
-document.getElementById('status-loading').style.display = 'none';
-
-// 1. DATA SUHU (Dari Tab "Average Temp")
-const dataSuhu = allData["Average Temp"].slice(-7); // Ambil 7 data terakhir
-const labelsSuhu = dataSuhu.map(item => item["Tanggal"] || "N/A");
-const nilaiSuhu = dataSuhu.map(item => item["Suhu"] || 0);
-renderChart('chartSuhu', labelsSuhu, nilaiSuhu, 'Suhu Rata-rata', '#e74c3c');
-
-// 2. DATA HM & AMPERE (Dari Tab "HM & Ampere Average")
-const dataHMAmpere = allData["HM & Ampere Average"].slice(-7);
-const labelsHMAmpere = dataHMAmpere.map(item => item["Tanggal"] || "N/A");
-
-// Kolom HM (Sesuaikan nama kolom di sheet Anda)
-const nilaiHM = dataHMAmpere.map(item => item["HM"] || 0);
-renderChart('chartHM', labelsHMAmpere, nilaiHM, 'Total HM', '#3498db');
-
-// Kolom Ampere
-const nilaiAmpere = dataHMAmpere.map(item => item["Ampere"] || 0);
-renderChart('chartAmpere', labelsHMAmpere, nilaiAmpere, 'Avg Ampere', '#2ecc71');
-
-} catch (error) {
-document.getElementById('status-loading').innerHTML = "❌ Gagal memuat data. Cek kembali koneksi API.";
-console.error(error);
-}
-}
-
-function renderChart(id, labels, data, title, color) {
-new Chart(document.getElementById(id), {
-type: 'line',
-data: {
-labels: labels,
-datasets: [{
-label: title,
-data: data,
-borderColor: color,
-backgroundColor: color + '22',
-fill: true,
-tension: 0.4
-}]
-}
-});
-}
-
-updateDashboard();
-</script>
+                document.getElementById('output').innerHTML = html;
+            } catch (e) {
+                document.getElementById('status').innerHTML = "Status: Gagal ambil data.";
+            }
+        }
+        getLog();
+        setInterval(getLog, 60000); // Auto update setiap 1 menit
+    </script>
 </body>
 </html>
