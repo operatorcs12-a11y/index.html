@@ -6,69 +6,94 @@
     <title>Production 1 Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 900px; margin: auto; margin-bottom: 20px; }
-        .header { background: #1a2a6c; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        h3 { margin-top: 0; color: #333; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .loading { text-align: center; font-weight: bold; color: #1a2a6c; padding: 20px; }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="container">
     <div class="header">
-        <h2>DAILY ACTIVITY MONITORING</h2>
-        <p>M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+        <h2 style="margin:0;">DAILY ACTIVITY MONITORING</h2>
+        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
-    <div id="loader" style="text-align:center; padding:20px;">Menyaring data kosong...</div>
-    <canvas id="chartSuhu"></canvas>
+
+    <div id="loader" class="loading">Sinkronisasi Data Cold Storage...</div>
+
+    <div class="card">
+        <h3>Average Temperature (°C)</h3>
+        <canvas id="chartSuhu"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Hour Meter (HM) Monitoring</h3>
+        <canvas id="chartHM"></canvas>
+    </div>
 </div>
 
 <script>
     const apiURL = "https://script.google.com/macros/s/AKfycbx8zA7oTztaAwm-o1jtecDFbwiovftMBsSxatcQiPdw6uNiNvPyMThTgOedRxi0OHj6FA/exec";
 
-    async function loadData() {
+    async function loadDashboard() {
         try {
             const response = await fetch(apiURL);
             const allData = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // MENGAMBIL TAB "Average Temp"
-            const key = "Average Temp";
-            const rawData = allData[key];
+            // 1. PROSES DATA SUHU
+            const dataSuhu = allData["Average Temp"].filter(row => {
+                const val = Object.values(row)[1];
+                return val !== "" && val !== null && val !== 0;
+            }).slice(-14);
 
-            // PROSES MEMBERSIHKAN DATA (Membuang baris kosong)
-            const cleanData = rawData.filter(row => {
-                const nilai = Object.values(row)[1]; 
-                return nilai !== "" && nilai !== null && nilai !== 0;
-            }).slice(-14); // Ambil 14 hari terakhir yang ada isinya
+            renderChart('chartSuhu', 
+                dataSuhu.map(d => Object.values(d)[0]), 
+                dataSuhu.map(d => parseFloat(Object.values(d)[1])), 
+                'Suhu (°C)', '#e74c3c');
 
-            new Chart(document.getElementById('chartSuhu'), {
-                type: 'line',
-                data: {
-                    labels: cleanData.map(d => Object.values(d)[0]), // Ambil Tanggal
-                    datasets: [{
-                        label: 'Suhu Rata-rata (°C)',
-                        data: cleanData.map(d => parseFloat(Object.values(d)[1])), // Ambil Angka Suhu
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { 
-                            // Mengatur agar skala suhu sesuai dengan data Cold Storage (-20an)
-                            reverse: false 
-                        }
-                    }
-                }
-            });
+            // 2. PROSES DATA HM
+            const dataHM = allData["HM & Ampere Average"].filter(row => {
+                const val = Object.values(row)[1];
+                return val !== "" && val !== null && val !== 0;
+            }).slice(-14);
+
+            renderChart('chartHM', 
+                dataHM.map(d => Object.values(d)[0]), 
+                dataHM.map(d => parseFloat(Object.values(d)[1])), 
+                'Running Hours (HM)', '#3498db');
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat. Periksa koneksi.";
+            document.getElementById('loader').innerText = "Gagal memuat. Periksa koneksi atau Izin Apps Script.";
         }
     }
-    loadData();
+
+    function renderChart(id, labels, values, title, color) {
+        new Chart(document.getElementById(id), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: values,
+                    borderColor: color,
+                    backgroundColor: color + '11',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+    }
+
+    loadDashboard();
 </script>
 </body>
 </html>
