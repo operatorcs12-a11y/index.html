@@ -3,97 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 Dashboard</title>
+    <title>CS1 & Anteroom Monitoring</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
-        h3 { margin-top: 0; color: #333; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .loading { text-align: center; font-weight: bold; color: #1a2a6c; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; font-size: 15px; color: #1a2a6c; border-bottom: 2px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
+        .loading { text-align: center; font-weight: bold; color: #1a2a6c; margin: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2 style="margin:0;">DAILY ACTIVITY MONITORING</h2>
+        <h2 style="margin:0;">COLD STORAGE 1 & ANTEROOM MONITORING</h2>
         <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
 
-    <div id="loader" class="loading">Sinkronisasi Data Cold Storage...</div>
+    <div id="loader" class="loading">Sinkronisasi Data Kolom B-F...</div>
 
-    <div class="card">
-        <h3>Average Temperature (°C)</h3>
-        <canvas id="chartSuhu"></canvas>
-    </div>
-
-    <div class="card">
-        <h3>Hour Meter (HM) Monitoring</h3>
-        <canvas id="chartHM"></canvas>
-    </div>
+    <div class="grid" id="chart-container">
+        </div>
 </div>
 
 <script>
     const apiURL = "https://script.google.com/macros/s/AKfycbx8zA7oTztaAwm-o1jtecDFbwiovftMBsSxatcQiPdw6uNiNvPyMThTgOedRxi0OHj6FA/exec";
 
-    async function loadDashboard() {
+    async function init() {
         try {
             const response = await fetch(apiURL);
-            const allData = await response.json();
+            const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // 1. PROSES DATA SUHU
-            const dataSuhu = allData["Average Temp"].filter(row => {
-                const val = Object.values(row)[1];
-                return val !== "" && val !== null && val !== 0;
-            }).slice(-14);
+            const tabName = "Average Temp";
+            // Filter data agar hanya mengambil baris yang kolom B-nya ada isinya
+            const rawData = data[tabName].filter(row => Object.values(row)[1] !== "").slice(-12);
 
-            renderChart('chartSuhu', 
-                dataSuhu.map(d => Object.values(d)[0]), 
-                dataSuhu.map(d => parseFloat(Object.values(d)[1])), 
-                'Suhu (°C)', '#e74c3c');
+            // Konfigurasi sesuai urutan kolom yang Bapak berikan
+            const config = [
+                { index: 1, label: "Ruang 1 (CS1)", color: "#e74c3c" },
+                { index: 2, label: "Ruang 2 (CS1)", color: "#3498db" },
+                { index: 3, label: "Ruang 3 (CS1)", color: "#2ecc71" },
+                { index: 4, label: "Ruang 4 (CS1)", color: "#f1c40f" },
+                { index: 5, label: "Anteroom", color: "#9b59b6" }
+            ];
 
-            // 2. PROSES DATA HM
-            const dataHM = allData["HM & Ampere Average"].filter(row => {
-                const val = Object.values(row)[1];
-                return val !== "" && val !== null && val !== 0;
-            }).slice(-14);
+            const container = document.getElementById('chart-container');
 
-            renderChart('chartHM', 
-                dataHM.map(d => Object.values(d)[0]), 
-                dataHM.map(d => parseFloat(Object.values(d)[1])), 
-                'Running Hours (HM)', '#3498db');
+            config.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const canvasId = `chart_${item.index}`;
+                card.innerHTML = `<h3>${item.label}</h3><canvas id="${canvasId}"></canvas>`;
+                container.appendChild(card);
+
+                new Chart(document.getElementById(canvasId), {
+                    type: 'line',
+                    data: {
+                        labels: rawData.map(d => String(Object.values(d)[0]).split('T')[0]),
+                        datasets: [{
+                            label: 'Temp (°C)',
+                            data: rawData.map(d => {
+                                const val = Object.values(d)[item.index];
+                                return val !== "" ? parseFloat(val) : null;
+                            }),
+                            borderColor: item.color,
+                            backgroundColor: item.color + '11',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { 
+                            y: { 
+                                ticks: { callback: value => value + '°C' }
+                            } 
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            });
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat. Periksa koneksi atau Izin Apps Script.";
+            document.getElementById('loader').innerText = "Gagal memuat data. Periksa Apps Script.";
         }
     }
-
-    function renderChart(id, labels, values, title, color) {
-        new Chart(document.getElementById(id), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: values,
-                    borderColor: color,
-                    backgroundColor: color + '11',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: { y: { beginAtZero: false } }
-            }
-        });
-    }
-
-    loadDashboard();
+    init();
 </script>
 </body>
 </html>
