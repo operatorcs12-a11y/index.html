@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 Monitoring</title>
+    <title>Dashboard Production 1</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #1a2a6c; text-align: center; }
-        .loading { text-align: center; font-style: italic; color: #666; }
+        h2 { color: #1a2a6c; text-align: center; margin: 0; }
     </style>
 </head>
 <body>
@@ -19,49 +18,43 @@
         <p style="text-align:center;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
 
-    <div id="loader" class="loading">Memuat data dari Google Sheets...</div>
+    <div id="loader" style="text-align:center;">Memuat data...</div>
 
     <div class="card">
-        <h3>Average Temperature (°C)</h3>
-        <canvas id="chartSuhu"></canvas>
+        <canvas id="myChart"></canvas>
     </div>
 
     <script>
-        // Ini adalah pintu masuk datanya
         const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
 
-        async function ambilData() {
+        async function main() {
             try {
-                const response = await fetch(apiURL);
-                const allData = await response.json();
+                const res = await fetch(apiURL);
+                const data = await res.json();
                 document.getElementById('loader').style.display = 'none';
 
-                // Mengambil data dari tab "Average Temp" sesuai gambar Anda
-                const dataTab = allData["Average Temp"].slice(-10); // Ambil 10 baris terakhir
-                const labelTanggal = dataTab.map(item => item["Tanggal"] || "N/A");
-                const nilaiSuhu = dataTab.map(item => item["Suhu"] || 0);
+                // Ambil data dari tab Average Temp (Pastikan namanya sama di Sheet)
+                const sheetData = data["Average Temp"] || data["Average Temp "]; 
+                const last10 = sheetData.slice(-10);
 
-                // Membuat Grafik
-                const ctx = document.getElementById('chartSuhu').getContext('2d');
-                new Chart(ctx, {
+                new Chart(document.getElementById('myChart'), {
                     type: 'line',
                     data: {
-                        labels: labelTanggal,
+                        labels: last10.map(d => d[Object.keys(d)[0]]), // Ambil kolom pertama (Tanggal)
                         datasets: [{
-                            label: 'Suhu Cold Storage',
-                            data: nilaiSuhu,
+                            label: 'Monitoring Suhu',
+                            data: last10.map(d => d[Object.keys(d)[1]]), // Ambil kolom kedua (Suhu)
                             borderColor: '#e74c3c',
                             backgroundColor: 'rgba(231, 76, 60, 0.2)',
-                            fill: true,
-                            tension: 0.3
+                            fill: true
                         }]
                     }
                 });
-            } catch (error) {
-                document.getElementById('loader').innerText = "Gagal memuat. Pastikan Apps Script sudah di-Deploy sebagai 'Anyone'.";
+            } catch (e) {
+                document.getElementById('loader').innerText = "Koneksi gagal. Cek URL Apps Script!";
             }
         }
-        ambilData();
+        main();
     </script>
 </body>
 </html>
