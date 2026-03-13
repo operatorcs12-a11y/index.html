@@ -1,51 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Monitoring Cold Storage</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production 1 - Monitoring</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
-        .data-box { border: 1px solid #0f0; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-        h2 { color: #fff; border-bottom: 1px solid #555; }
-        .val { font-size: 20px; font-weight: bold; color: #ffeb3b; }
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .header { background: #1a2a6c; color: white; padding: 15px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 16px; }
+        .loading { text-align: center; font-weight: bold; color: #1a2a6c; margin-top: 50px; }
     </style>
 </head>
 <body>
-    <h2>LOG DATA PRODUCTION 1 - M RIVALDI EKA SATRIA</h2>
-    <div id="status">Status: Menghubungkan...</div>
-    <div id="output"></div>
 
-    <script>
-        const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
+<div class="header">
+    <h2 style="margin:0;">COLD STORAGE MONITORING</h2>
+    <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+</div>
 
-        async function getLog() {
-            try {
-                const res = await fetch(apiURL);
-                const data = await res.json();
-                document.getElementById('status').innerHTML = "Status: Terhubung (Real-time)";
-                
-                let html = "";
-                
-                // Ambil 5 data terakhir dari tab Average Temp
-                const tempLogs = data["Average Temp"].slice(-5).reverse();
-                html += "<h3>--- 5 LOG SUHU TERAKHIR ---</h3>";
-                tempLogs.forEach(log => {
-                    html += `<div class="data-box">TANGGAL: ${log.Tanggal} | <span class="val">SUHU: ${log.Suhu}°C</span></div>`;
-                });
+<div id="loader" class="loading">Menghubungkan ke Google Sheets...</div>
 
-                // Ambil 5 data terakhir dari tab HM
-                const hmLogs = data["HM & Ampere Average"].slice(-5).reverse();
-                html += "<h3>--- 5 LOG HM & AMPERE TERAKHIR ---</h3>";
-                hmLogs.forEach(log => {
-                    html += `<div class="data-box">TANGGAL: ${log.Tanggal} | HM: ${log.HM} | AMP: ${log.Ampere}</div>`;
-                });
+<div class="grid">
+    <div class="card">
+        <h3>Average Temp (°C)</h3>
+        <canvas id="chartSuhu"></canvas>
+    </div>
 
-                document.getElementById('output').innerHTML = html;
-            } catch (e) {
-                document.getElementById('status').innerHTML = "Status: Gagal ambil data.";
-            }
+    <div class="card">
+        <h3>HM & Ampere Monitoring</h3>
+        <canvas id="chartHM"></canvas>
+    </div>
+</div>
+
+<script>
+    // Link Apps Script Anda
+    const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
+
+    async function getData() {
+        try {
+            const response = await fetch(apiURL);
+            const data = await response.json();
+            document.getElementById('loader').style.display = 'none';
+
+            // 1. Ambil dari Tab "Average Temp" (SESUAI GAMBAR)
+            const dsTemp = data["Average Temp"].slice(-7); 
+            const labelTemp = dsTemp.map(d => d["Tanggal"]);
+            const valTemp = dsTemp.map(d => d["Suhu"] || 0);
+            renderChart('chartSuhu', labelTemp, valTemp, 'Suhu', '#e74c3c');
+
+            // 2. Ambil dari Tab "HM & Ampere Average" (SESUAI GAMBAR)
+            const dsHM = data["HM & Ampere Average"].slice(-7);
+            const labelHM = dsHM.map(d => d["Tanggal"]);
+            const valHM = dsHM.map(d => d["HM"] || 0);
+            renderChart('chartHM', labelHM, valHM, 'Running Hours', '#3498db');
+
+        } catch (error) {
+            document.getElementById('loader').innerHTML = "Gagal memuat data. Cek Apps Script!";
+            console.error(error);
         }
-        getLog();
-        setInterval(getLog, 60000); // Auto update setiap 1 menit
-    </script>
+    }
+
+    function renderChart(id, labels, values, title, color) {
+        new Chart(document.getElementById(id), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: values,
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    fill: true,
+                    tension: 0.3
+                }]
+            }
+        });
+    }
+
+    getData();
+</script>
 </body>
 </html>
