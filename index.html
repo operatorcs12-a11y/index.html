@@ -3,30 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS1 & Anteroom Monitoring</title>
+    <title>Production 1 - Full CS Monitoring</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .section-title { background: #fff; padding: 10px 20px; border-radius: 8px; margin: 20px 0; color: #1a2a6c; border-left: 5px solid #1a2a6c; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; font-size: 15px; color: #1a2a6c; border-bottom: 2px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
-        .loading { text-align: center; font-weight: bold; color: #1a2a6c; margin: 20px; }
+        h3 { margin-top: 0; font-size: 14px; color: #1a2a6c; border-bottom: 1px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
+        .loading { text-align: center; font-weight: bold; color: #1a2a6c; padding: 50px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2 style="margin:0;">COLD STORAGE 1 & ANTEROOM MONITORING</h2>
+        <h2 style="margin:0;">COLD STORAGE MULTI-UNIT MONITORING</h2>
         <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
 
-    <div id="loader" class="loading">Sinkronisasi Data Kolom B-F...</div>
+    <div id="loader" class="loading">Sinkronisasi Data CS1 & CS2...</div>
 
-    <div class="grid" id="chart-container">
-        </div>
+    <div class="section-title">UNIT COLD STORAGE 1 (CS1)</div>
+    <div class="grid" id="container-cs1"></div>
+
+    <div class="section-title">UNIT COLD STORAGE 2 (CS2)</div>
+    <div class="grid" id="container-cs2"></div>
 </div>
 
 <script>
@@ -38,63 +42,72 @@
             const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            const tabName = "Average Temp";
-            // Filter data agar hanya mengambil baris yang kolom B-nya ada isinya
-            const rawData = data[tabName].filter(row => Object.values(row)[1] !== "").slice(-12);
+            const rawData = data["Average Temp"].filter(row => Object.values(row)[1] !== "").slice(-12);
+            const labels = rawData.map(d => String(Object.values(d)[0]).split('T')[0]);
 
-            // Konfigurasi sesuai urutan kolom yang Bapak berikan
-            const config = [
+            // KONFIGURASI CS1 (Kolom B, C, D, E, F)
+            const configCS1 = [
                 { index: 1, label: "Ruang 1 (CS1)", color: "#e74c3c" },
                 { index: 2, label: "Ruang 2 (CS1)", color: "#3498db" },
                 { index: 3, label: "Ruang 3 (CS1)", color: "#2ecc71" },
                 { index: 4, label: "Ruang 4 (CS1)", color: "#f1c40f" },
-                { index: 5, label: "Anteroom", color: "#9b59b6" }
+                { index: 5, label: "Anteroom CS1", color: "#9b59b6" }
             ];
 
-            const container = document.getElementById('chart-container');
+            // KONFIGURASI CS2 (Kolom H, I, J, K -> Indeks 7, 8, 9, 10)
+            const configCS2 = [
+                { index: 7, label: "Ruang A (CS2)", color: "#e67e22" },
+                { index: 8, label: "Ruang B (CS2)", color: "#1abc9c" },
+                { index: 9, label: "Ruang C (CS2)", color: "#34495e" },
+                { index: 10, label: "Anteroom CS2", color: "#7f8c8d" }
+            ];
 
-            config.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                const canvasId = `chart_${item.index}`;
-                card.innerHTML = `<h3>${item.label}</h3><canvas id="${canvasId}"></canvas>`;
-                container.appendChild(card);
-
-                new Chart(document.getElementById(canvasId), {
-                    type: 'line',
-                    data: {
-                        labels: rawData.map(d => String(Object.values(d)[0]).split('T')[0]),
-                        datasets: [{
-                            label: 'Temp (°C)',
-                            data: rawData.map(d => {
-                                const val = Object.values(d)[item.index];
-                                return val !== "" ? parseFloat(val) : null;
-                            }),
-                            borderColor: item.color,
-                            backgroundColor: item.color + '11',
-                            fill: true,
-                            tension: 0.3,
-                            borderWidth: 2,
-                            pointRadius: 3
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: { 
-                            y: { 
-                                ticks: { callback: value => value + '°C' }
-                            } 
-                        },
-                        plugins: {
-                            legend: { display: false }
-                        }
-                    }
-                });
-            });
+            renderGroup(configCS1, "container-cs1", rawData, labels);
+            renderGroup(configCS2, "container-cs2", rawData, labels);
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat data. Periksa Apps Script.";
+            document.getElementById('loader').innerText = "Gagal memuat data detail.";
         }
+    }
+
+    function renderGroup(configs, containerId, rawData, labels) {
+        const container = document.getElementById(containerId);
+        configs.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const canvasId = `chart_${item.index}`;
+            card.innerHTML = `<h3>${item.label}</h3><canvas id="${canvasId}"></canvas>`;
+            container.appendChild(card);
+
+            new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Suhu (°C)',
+                        data: rawData.map(d => {
+                            const val = Object.values(d)[item.index];
+                            return val !== "" ? parseFloat(val) : null;
+                        }),
+                        borderColor: item.color,
+                        backgroundColor: item.color + '11',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#f0f0f0' }, ticks: { callback: v => v + '°' } },
+                        x: { grid: { display: false }, ticks: { rotation: 45, font: { size: 10 } } }
+                    }
+                }
+            });
+        });
     }
     init();
 </script>
