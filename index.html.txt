@@ -3,84 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 - Monitoring</title>
+    <title>Production 1 Monitoring</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .header { background: #1a2a6c; color: white; padding: 15px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 16px; }
-        .loading { text-align: center; font-weight: bold; color: #1a2a6c; margin-top: 50px; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #1a2a6c; text-align: center; }
+        .loading { text-align: center; font-style: italic; color: #666; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h2 style="margin:0;">COLD STORAGE MONITORING</h2>
-    <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
-</div>
-
-<div id="loader" class="loading">Menghubungkan ke Google Sheets...</div>
-
-<div class="grid">
     <div class="card">
-        <h3>Average Temp (°C)</h3>
+        <h2>DAILY ACTIVITY MONITORING</h2>
+        <p style="text-align:center;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+    </div>
+
+    <div id="loader" class="loading">Memuat data dari Google Sheets...</div>
+
+    <div class="card">
+        <h3>Average Temperature (°C)</h3>
         <canvas id="chartSuhu"></canvas>
     </div>
 
-    <div class="card">
-        <h3>HM & Ampere Monitoring</h3>
-        <canvas id="chartHM"></canvas>
-    </div>
-</div>
+    <script>
+        // Ini adalah pintu masuk datanya
+        const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
 
-<script>
-    // Link Apps Script Anda
-    const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
+        async function ambilData() {
+            try {
+                const response = await fetch(apiURL);
+                const allData = await response.json();
+                document.getElementById('loader').style.display = 'none';
 
-    async function getData() {
-        try {
-            const response = await fetch(apiURL);
-            const data = await response.json();
-            document.getElementById('loader').style.display = 'none';
+                // Mengambil data dari tab "Average Temp" sesuai gambar Anda
+                const dataTab = allData["Average Temp"].slice(-10); // Ambil 10 baris terakhir
+                const labelTanggal = dataTab.map(item => item["Tanggal"] || "N/A");
+                const nilaiSuhu = dataTab.map(item => item["Suhu"] || 0);
 
-            // 1. Ambil dari Tab "Average Temp" (SESUAI GAMBAR)
-            const dsTemp = data["Average Temp"].slice(-7); 
-            const labelTemp = dsTemp.map(d => d["Tanggal"]);
-            const valTemp = dsTemp.map(d => d["Suhu"] || 0);
-            renderChart('chartSuhu', labelTemp, valTemp, 'Suhu', '#e74c3c');
-
-            // 2. Ambil dari Tab "HM & Ampere Average" (SESUAI GAMBAR)
-            const dsHM = data["HM & Ampere Average"].slice(-7);
-            const labelHM = dsHM.map(d => d["Tanggal"]);
-            const valHM = dsHM.map(d => d["HM"] || 0);
-            renderChart('chartHM', labelHM, valHM, 'Running Hours', '#3498db');
-
-        } catch (error) {
-            document.getElementById('loader').innerHTML = "Gagal memuat data. Cek Apps Script!";
-            console.error(error);
-        }
-    }
-
-    function renderChart(id, labels, values, title, color) {
-        new Chart(document.getElementById(id), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: values,
-                    borderColor: color,
-                    backgroundColor: color + '22',
-                    fill: true,
-                    tension: 0.3
-                }]
+                // Membuat Grafik
+                const ctx = document.getElementById('chartSuhu').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labelTanggal,
+                        datasets: [{
+                            label: 'Suhu Cold Storage',
+                            data: nilaiSuhu,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    }
+                });
+            } catch (error) {
+                document.getElementById('loader').innerText = "Gagal memuat. Pastikan Apps Script sudah di-Deploy sebagai 'Anyone'.";
             }
-        });
-    }
-
-    getData();
-</script>
+        }
+        ambilData();
+    </script>
 </body>
 </html>
