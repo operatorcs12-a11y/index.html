@@ -3,58 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Production 1</title>
+    <title>Production 1 Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #1a2a6c; text-align: center; margin: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 16px; }
+        .status-msg { text-align: center; font-weight: bold; color: #1a2a6c; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>DAILY ACTIVITY MONITORING</h2>
-        <p style="text-align:center;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0; font-size: 22px;">DAILY ACTIVITY MONITORING</h1>
+        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1 - COLD STORAGE</p>
     </div>
 
-    <div id="loader" style="text-align:center;">Memuat data...</div>
+    <div id="status" class="status-msg">Menghubungkan ke Database...</div>
 
-    <div class="card">
-        <canvas id="myChart"></canvas>
+    <div class="grid">
+        <div class="card">
+            <h3>Average Temp (°C)</h3>
+            <canvas id="chartSuhu"></canvas>
+        </div>
+
+        <div class="card">
+            <h3>Hour Meter (HM) Monitoring</h3>
+            <canvas id="chartHM"></canvas>
+        </div>
     </div>
+</div>
 
-    <script>
-        const apiURL = "https://script.google.com/macros/s/AKfycbyOfYnDgbRJhJa9FfoAuuNkHS6zGuH87JsaONhqY34NMQhaUr6pifNeUYxlWcWH6vbw6g/exec";
+<script>
+    // URL API TERBARU ANDA
+    const apiURL = "https://script.google.com/macros/s/AKfycbz3f0Djh8GLR8UhXp1XaheGnYZFiWL5wvo8NVIHOE5ZoVt7pqSAE_CbgN692qvoGOfIKg/exec";
 
-        async function main() {
-            try {
-                const res = await fetch(apiURL);
-                const data = await res.json();
-                document.getElementById('loader').style.display = 'none';
+    async function loadDashboard() {
+        try {
+            const response = await fetch(apiURL);
+            const allData = await response.json();
+            document.getElementById('status').style.display = 'none';
 
-                // Ambil data dari tab Average Temp (Pastikan namanya sama di Sheet)
-                const sheetData = data["Average Temp"] || data["Average Temp "]; 
-                const last10 = sheetData.slice(-10);
+            // 1. Ambil data Tab Average Temp (Mencari nama yang mirip)
+            const keyTemp = Object.keys(allData).find(k => k.trim() === "Average Temp");
+            const dataTemp = allData[keyTemp].slice(-7); // Ambil 7 hari terakhir
+            
+            renderChart('chartSuhu', 
+                dataTemp.map(d => d["Tanggal"] || "N/A"), 
+                dataTemp.map(d => d["Suhu"] || 0), 
+                'Suhu Rata-rata', '#e74c3c');
 
-                new Chart(document.getElementById('myChart'), {
-                    type: 'line',
-                    data: {
-                        labels: last10.map(d => d[Object.keys(d)[0]]), // Ambil kolom pertama (Tanggal)
-                        datasets: [{
-                            label: 'Monitoring Suhu',
-                            data: last10.map(d => d[Object.keys(d)[1]]), // Ambil kolom kedua (Suhu)
-                            borderColor: '#e74c3c',
-                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
-                            fill: true
-                        }]
-                    }
-                });
-            } catch (e) {
-                document.getElementById('loader').innerText = "Koneksi gagal. Cek URL Apps Script!";
-            }
+            // 2. Ambil data Tab HM & Ampere Average
+            const keyHM = Object.keys(allData).find(k => k.trim() === "HM & Ampere Average");
+            const dataHM = allData[keyHM].slice(-7);
+            
+            renderChart('chartHM', 
+                dataHM.map(d => d["Tanggal"] || "N/A"), 
+                dataHM.map(d => d["HM"] || 0), 
+                'Running Hours (HM)', '#3498db');
+
+        } catch (error) {
+            document.getElementById('status').innerHTML = "❌ Gagal memuat data. Pastikan Apps Script diset 'Anyone'.";
+            console.error(error);
         }
-        main();
-    </script>
+    }
+
+    function renderChart(id, labels, data, title, color) {
+        new Chart(document.getElementById(id), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: true } }
+            }
+        });
+    }
+
+    loadDashboard();
+</script>
 </body>
 </html>
