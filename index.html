@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 - Full CS1 Monitoring</title>
+    <title>Production 1 - Monitoring Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-        .section-title { background: #fff; padding: 12px 20px; border-radius: 8px; margin: 30px 0 15px; color: #1a2a6c; border-left: 6px solid #1a2a6c; font-weight: bold; font-size: 18px; text-transform: uppercase; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        h3 { margin-top: 0; font-size: 12px; color: #1a2a6c; border-bottom: 1px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
+        .section-title { background: #fff; padding: 12px 20px; border-radius: 8px; margin: 30px 0 15px; color: #1a2a6c; border-left: 6px solid #1a2a6c; font-weight: bold; font-size: 16px; text-transform: uppercase; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        h3 { margin-top: 0; font-size: 11px; color: #1a2a6c; border-bottom: 1px solid #eee; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .loading { text-align: center; font-weight: bold; color: #1a2a6c; padding: 50px; }
     </style>
 </head>
@@ -21,10 +21,10 @@
 <div class="container">
     <div class="header">
         <h2 style="margin:0;">CS1 MULTI-COMPRESSOR MONITORING</h2>
-        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PT ANEKA TUNA INDONESIA</p>
+        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
 
-    <div id="loader" class="loading">Sinkronisasi Data Cold Storage...</div>
+    <div id="loader" class="loading">Mensinkronkan Data (Mulai Baris 3)...</div>
 
     <div class="section-title">TEMPERATURE MONITORING (RUANGAN)</div>
     <div class="grid" id="container-temp"></div>
@@ -45,9 +45,16 @@
             const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // --- DATA TEMPERATURE ---
-            if(data["Average Temp"]) {
-                const rawTemp = data["Average Temp"].filter(row => Object.values(row)[1] !== "").slice(-10);
+            // FUNGSI UNTUK MELEWATI HEADER (Data mulai sel 3 ke bawah)
+            const cleanData = (tabName) => {
+                if(!data[tabName]) return [];
+                // data[tabName][0] adalah baris 2 di sheet, jadi kita lewati itu
+                return data[tabName].slice(1).filter(row => Object.values(row)[0] !== "");
+            };
+
+            // --- 1. TEMPERATURE RUANGAN ---
+            const rawTemp = cleanData("Average Temp").slice(-10);
+            if(rawTemp.length > 0) {
                 const labelsTemp = rawTemp.map(d => String(Object.values(d)[0]).split('T')[0]);
                 const configTemp = [
                     { idx: 1, label: "Ruang 1 (CS1)", color: "#e74c3c", unit: "°C" },
@@ -59,28 +66,27 @@
                 renderGroup(configTemp, "container-temp", rawTemp, labelsTemp);
             }
 
-            // --- DATA COMPRESSOR ---
-            const pressData = data["Average Pressure CS"];
-            if(pressData) {
-                const rawComp = pressData.filter(row => Object.values(row)[1] !== "").slice(-10);
+            // --- 2. COMPRESSOR DATA ---
+            const rawComp = cleanData("Average Pressure CS").slice(-10);
+            if(rawComp.length > 0) {
                 const labelsComp = rawComp.map(d => String(Object.values(d)[0]).split('T')[0]);
 
-                // COMPRESSOR 1 (Indeks 1-8 / Kolom B-I)
+                // COMPRESSOR 1 (KOLOM B-I / Indeks 1-8)
                 const configComp1 = [
-                    { idx: 1, label: "Oil Pressure C1", color: "#f39c12", unit: " Bar" },
-                    { idx: 2, label: "Suction Press C1", color: "#3498db", unit: " Bar" },
-                    { idx: 3, label: "Inter Pressure C1", color: "#1abc9c", unit: " Bar" },
-                    { idx: 4, label: "Disch Pressure C1", color: "#e74c3c", unit: " Bar" },
-                    { idx: 8, label: "Temp Discharge C1", color: "#c0392b", unit: " °C" }
+                    { idx: 1, label: "Oil Press C1", color: "#f39c12", unit: " Bar" },
+                    { idx: 2, label: "Suct Press C1", color: "#3498db", unit: " Bar" },
+                    { idx: 3, label: "Inter Press C1", color: "#1abc9c", unit: " Bar" },
+                    { idx: 4, label: "Disch Press C1", color: "#e74c3c", unit: " Bar" },
+                    { idx: 8, label: "Temp Disch C1", color: "#c0392b", unit: " °C" }
                 ];
 
-                // COMPRESSOR 2 (Indeks 12-19 / Kolom M-T)
+                // COMPRESSOR 2 (KOLOM M-T / Indeks 12-19)
                 const configComp2 = [
-                    { idx: 12, label: "Oil Pressure C2", color: "#f39c12", unit: " Bar" },
-                    { idx: 13, label: "Suction Press C2", color: "#3498db", unit: " Bar" },
-                    { idx: 14, label: "Inter Pressure C2", color: "#1abc9c", unit: " Bar" },
-                    { idx: 15, label: "Disch Pressure C2", color: "#e74c3c", unit: " Bar" },
-                    { idx: 19, label: "Temp Discharge C2", color: "#c0392b", unit: " °C" }
+                    { idx: 12, label: "Oil Press C2", color: "#f39c12", unit: " Bar" },
+                    { idx: 13, label: "Suct Press C2", color: "#3498db", unit: " Bar" },
+                    { idx: 14, label: "Inter Press C2", color: "#1abc9c", unit: " Bar" },
+                    { idx: 15, label: "Disch Press C2", color: "#e74c3c", unit: " Bar" },
+                    { idx: 19, label: "Temp Disch C2", color: "#c0392b", unit: " °C" }
                 ];
 
                 renderGroup(configComp1, "container-comp1", rawComp, labelsComp);
@@ -88,7 +94,7 @@
             }
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat data. Periksa Tab Sheets Anda.";
+            document.getElementById('loader').innerText = "Gagal memuat data baris 3. Periksa koneksi.";
         }
     }
 
@@ -107,7 +113,10 @@
                     labels: labels,
                     datasets: [{
                         label: item.label,
-                        data: rawData.map(d => parseFloat(Object.values(d)[item.idx]) || 0),
+                        data: rawData.map(d => {
+                            const val = Object.values(d)[item.idx];
+                            return (val !== "" && val !== null) ? parseFloat(val) : null;
+                        }),
                         borderColor: item.color,
                         backgroundColor: item.color + '11',
                         fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3
@@ -117,7 +126,7 @@
                     responsive: true,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { ticks: { callback: v => v + item.unit }, grid: { color: '#f0f0f0' } },
+                        y: { ticks: { callback: v => v + item.unit }, grid: { color: '#f5f5f5' } },
                         x: { ticks: { rotation: 45, font: { size: 9 } } }
                     }
                 }
