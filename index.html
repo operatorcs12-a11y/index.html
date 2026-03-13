@@ -9,7 +9,7 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .section-title { background: #fff; padding: 10px 20px; border-radius: 8px; margin: 30px 0 15px; color: #1a2a6c; border-left: 5px solid #1a2a6c; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+        .section-title { background: #fff; padding: 10px 20px; border-radius: 8px; margin: 30px 0 15px; color: #1a2a6c; border-left: 5px solid #1a2a6c; font-weight: bold; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h3 { margin-top: 0; font-size: 13px; color: #1a2a6c; border-bottom: 1px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
@@ -24,7 +24,7 @@
         <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
 
-    <div id="loader" class="loading">Mensinkronkan Data Temperatur & Pressure...</div>
+    <div id="loader" class="loading">Mensinkronkan Data CS1, CS2 & Pressure...</div>
 
     <div class="section-title">TEMPERATURE UNIT CS1</div>
     <div class="grid" id="container-cs1"></div>
@@ -32,7 +32,7 @@
     <div class="section-title">TEMPERATURE UNIT CS2</div>
     <div class="grid" id="container-cs2"></div>
 
-    <div class="section-title">AVERAGE PRESSURE MONITORING <span>(10 Hari Terakhir)</span></div>
+    <div class="section-title">AVERAGE PRESSURE MONITORING (10 HARI)</div>
     <div class="grid" id="container-pressure"></div>
 </div>
 
@@ -45,43 +45,45 @@
             const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // 1. DATA TEMPERATUR (12 Hari)
-            const rawTemp = data["Average Temp"].filter(row => Object.values(row)[1] !== "").slice(-12);
-            const labelsTemp = rawTemp.map(d => String(Object.values(d)[0]).split('T')[0]);
+            // 1. DATA TEMPERATUR (Tab: Average Temp)
+            const tabTemp = "Average Temp";
+            if(data[tabTemp]) {
+                const rawTemp = data[tabTemp].filter(row => Object.values(row)[1] !== "").slice(-12);
+                const labelsTemp = rawTemp.map(d => String(Object.values(d)[0]).split('T')[0]);
+                
+                const configCS1 = [
+                    { index: 1, label: "Ruang 1 (CS1)", color: "#e74c3c" },
+                    { index: 2, label: "Ruang 2 (CS1)", color: "#3498db" },
+                    { index: 3, label: "Ruang 3 (CS1)", color: "#2ecc71" },
+                    { index: 4, label: "Ruang 4 (CS1)", color: "#f1c40f" },
+                    { index: 5, label: "Anteroom CS1", color: "#9b59b6" }
+                ];
+                const configCS2 = [
+                    { index: 7, label: "Ruang A (CS2)", color: "#e67e22" },
+                    { index: 8, label: "Ruang B (CS2)", color: "#1abc9c" },
+                    { index: 9, label: "Ruang C (CS2)", color: "#34495e" },
+                    { index: 10, label: "Anteroom CS2", color: "#7f8c8d" }
+                ];
+                renderGroup(configCS1, "container-cs1", rawTemp, labelsTemp, "°C");
+                renderGroup(configCS2, "container-cs2", rawTemp, labelsTemp, "°C");
+            }
 
-            // 2. DATA PRESSURE (10 Hari)
-            const rawPress = data["Average Pressure"].filter(row => Object.values(row)[1] !== "").slice(-10);
-            const labelsPress = rawPress.map(d => String(Object.values(d)[0]).split('T')[0]);
-
-            // KONFIGURASI GRAFIK
-            const configCS1 = [
-                { index: 1, label: "Ruang 1 (CS1)", color: "#e74c3c" },
-                { index: 2, label: "Ruang 2 (CS1)", color: "#3498db" },
-                { index: 3, label: "Ruang 3 (CS1)", color: "#2ecc71" },
-                { index: 4, label: "Ruang 4 (CS1)", color: "#f1c40f" },
-                { index: 5, label: "Anteroom CS1", color: "#9b59b6" }
-            ];
-
-            const configCS2 = [
-                { index: 7, label: "Ruang A (CS2)", color: "#e67e22" },
-                { index: 8, label: "Ruang B (CS2)", color: "#1abc9c" },
-                { index: 9, label: "Ruang C (CS2)", color: "#34495e" },
-                { index: 10, label: "Anteroom CS2", color: "#7f8c8d" }
-            ];
-
-            // Konfigurasi Pressure (Mengambil Kolom B, C, D dst di tab Average Pressure)
-            const configPress = [
-                { index: 1, label: "Discharge Pressure", color: "#c0392b" },
-                { index: 2, label: "Suction Pressure", color: "#2980b9" },
-                { index: 3, label: "Oil Pressure", color: "#f39c12" }
-            ];
-
-            renderGroup(configCS1, "container-cs1", rawTemp, labelsTemp, "°C");
-            renderGroup(configCS2, "container-cs2", rawTemp, labelsTemp, "°C");
-            renderGroup(configPress, "container-pressure", rawPress, labelsPress, " Bar");
+            // 2. DATA PRESSURE (Tab: Average Pressure CS) - SUDAH DIPERBAIKI NAMANYA
+            const tabPress = "Average Pressure CS";
+            if(data[tabPress]) {
+                const rawPress = data[tabPress].filter(row => Object.values(row)[1] !== "").slice(-10);
+                const labelsPress = rawPress.map(d => String(Object.values(d)[0]).split('T')[0]);
+                
+                const configPress = [
+                    { index: 1, label: "Discharge Pressure", color: "#c0392b" },
+                    { index: 2, label: "Suction Pressure", color: "#2980b9" },
+                    { index: 3, label: "Oil Pressure", color: "#f39c12" }
+                ];
+                renderGroup(configPress, "container-pressure", rawPress, labelsPress, " Bar");
+            }
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat data. Periksa Tab Average Pressure Anda.";
+            document.getElementById('loader').innerText = "Gagal memuat data. Periksa Tab 'Average Pressure CS' Anda.";
         }
     }
 
@@ -93,31 +95,24 @@
             const canvasId = `chart_${containerId}_${item.index}`;
             card.innerHTML = `<h3>${item.label}</h3><canvas id="${canvasId}"></canvas>`;
             container.appendChild(card);
-
             new Chart(document.getElementById(canvasId), {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: item.label,
-                        data: rawData.map(d => {
-                            const val = Object.values(d)[item.index];
-                            return val !== "" ? parseFloat(val) : null;
-                        }),
+                        data: rawData.map(d => parseFloat(Object.values(d)[item.index]) || 0),
                         borderColor: item.color,
                         backgroundColor: item.color + '11',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 4
+                        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { grid: { color: '#f0f0f0' }, ticks: { callback: v => v + unit } },
-                        x: { grid: { display: false }, ticks: { rotation: 45, font: { size: 10 } } }
+                        y: { ticks: { callback: v => v + unit } },
+                        x: { ticks: { rotation: 45, font: { size: 10 } } }
                     }
                 }
             });
