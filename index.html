@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production 1 - Compressor Detail</title>
+    <title>Production 1 - Monitoring Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: auto; }
         .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-        .comp-section { background: #fff; padding: 20px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .comp-title { font-size: 20px; font-weight: bold; color: #1a2a6c; border-bottom: 3px solid #1a2a6c; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
-        .card { background: #f9f9f9; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-        h3 { margin-top: 0; font-size: 13px; color: #555; text-transform: uppercase; }
+        .section-title { background: #fff; padding: 12px 20px; border-radius: 8px; margin: 30px 0 15px; color: #1a2a6c; border-left: 6px solid #1a2a6c; font-weight: bold; font-size: 18px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        h3 { margin-top: 0; font-size: 13px; color: #1a2a6c; border-bottom: 1px solid #eee; padding-bottom: 8px; text-transform: uppercase; }
         .loading { text-align: center; font-weight: bold; color: #1a2a6c; padding: 50px; }
     </style>
 </head>
@@ -21,16 +20,17 @@
 
 <div class="container">
     <div class="header">
-        <h2 style="margin:0;">DETAILED COMPRESSOR MONITORING</h2>
-        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+        <h2 style="margin:0;">PRODUCTION 1 MONITORING CENTER</h2>
+        <p style="margin:5px 0 0;">M RIVALDI EKA SATRIA | PT ANEKA TUNA INDONESIA</p>
     </div>
 
-    <div id="loader" class="loading">Menghubungkan ke Database Compressor...</div>
+    <div id="loader" class="loading">Memproses Data Ruangan & Compressor...</div>
 
-    <div class="comp-section" id="section-comp1" style="display:none;">
-        <div class="comp-title">UNIT COMPRESSOR 1 (Kolom B-K)</div>
-        <div class="grid" id="grid-comp1"></div>
-    </div>
+    <div class="section-title">TEMPERATURE MONITORING (CS1 & CS2)</div>
+    <div class="grid" id="container-temp"></div>
+
+    <div class="section-title">COMPRESSOR 1 - PRESSURE & TEMPERATURE DETAIL</div>
+    <div class="grid" id="container-comp1"></div>
 </div>
 
 <script>
@@ -42,38 +42,48 @@
             const data = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // Nama Tab (Sesuaikan dengan nama tab di Sheet Bapak)
-            const tabName = "Average Pressure CS"; 
-            const sheetData = data[tabName];
-
-            if(sheetData) {
-                document.getElementById('section-comp1').style.display = 'block';
-                const last10 = sheetData.filter(row => Object.values(row)[1] !== "").slice(-10);
-                const tgl = last10.map(d => String(Object.values(d)[0]).split('T')[0]);
-
-                // PEMETAAN KOLOM B SAMPAI K (Indeks 1 sampai 10)
-                // Bapak bisa ganti Label di bawah ini sesuai judul kolom asli Bapak
-                const configComp1 = [
-                    { idx: 1, label: "Suction Pressure", unit: " Bar", color: "#3498db" },
-                    { idx: 2, label: "Discharge Pressure", unit: " Bar", color: "#e74c3c" },
-                    { idx: 3, label: "Oil Pressure", unit: " Bar", color: "#f1c40f" },
-                    { idx: 4, label: "Oil Temp In", unit: " °C", color: "#e67e22" },
-                    { idx: 5, label: "Oil Temp Out", unit: " °C", color: "#d35400" },
-                    { idx: 6, label: "Discharge Temp", unit: " °C", color: "#c0392b" },
-                    { idx: 7, label: "Suction Temp", unit: " °C", color: "#2980b9" },
-                    { idx: 8, label: "Ampere", unit: " A", color: "#27ae60" },
-                    { idx: 9, label: "Slide Valve", unit: " %", color: "#8e44ad" },
-                    { idx: 10, label: "HM Running", unit: " Hrs", color: "#2c3e50" }
+            // 1. DATA TEMPERATURE (Tab: Average Temp)
+            if(data["Average Temp"]) {
+                const rawTemp = data["Average Temp"].filter(row => Object.values(row)[1] !== "").slice(-10);
+                const labelsTemp = rawTemp.map(d => String(Object.values(d)[0]).split('T')[0]);
+                
+                const configTemp = [
+                    { idx: 1, label: "Ruang 1 (CS1)", color: "#e74c3c", unit: "°C" },
+                    { idx: 2, label: "Ruang 2 (CS1)", color: "#3498db", unit: "°C" },
+                    { idx: 3, label: "Ruang 3 (CS1)", color: "#2ecc71", unit: "°C" },
+                    { idx: 4, label: "Ruang 4 (CS1)", color: "#f1c40f", unit: "°C" },
+                    { idx: 5, label: "Anteroom CS1", color: "#9b59b6", unit: "°C" },
+                    { idx: 7, label: "Ruang A (CS2)", color: "#e67e22", unit: "°C" },
+                    { idx: 10, label: "Anteroom CS2", color: "#7f8c8d", unit: "°C" }
                 ];
-
-                renderCharts(configComp1, "grid-comp1", last10, tgl);
+                renderGroup(configTemp, "container-temp", rawTemp, labelsTemp);
             }
+
+            // 2. DATA COMPRESSOR 1 (Tab: Average Pressure CS)
+            if(data["Average Pressure CS"]) {
+                const rawComp = data["Average Pressure CS"].filter(row => Object.values(row)[1] !== "").slice(-10);
+                const labelsComp = rawComp.map(d => String(Object.values(d)[0]).split('T')[0]);
+                
+                // Konfigurasi sesuai kolom B-I (Indeks 1-8)
+                const configComp1 = [
+                    { idx: 1, label: "Oil Pressure", color: "#f39c12", unit: " Bar" },
+                    { idx: 2, label: "Suction Pressure", color: "#3498db", unit: " Bar" },
+                    { idx: 3, label: "Intermediate Pressure", color: "#1abc9c", unit: " Bar" },
+                    { idx: 4, label: "Discharge Pressure", color: "#e74c3c", unit: " Bar" },
+                    { idx: 5, label: "Temp Suction", color: "#2980b9", unit: " °C" },
+                    { idx: 6, label: "Temp Inter-suction", color: "#16a085", unit: " °C" },
+                    { idx: 7, label: "Temp Inter-discharge", color: "#d35400", unit: " °C" },
+                    { idx: 8, label: "Temp Discharge", color: "#c0392b", unit: " °C" }
+                ];
+                renderGroup(configComp1, "container-comp1", rawComp, labelsComp);
+            }
+
         } catch (e) {
-            document.getElementById('loader').innerText = "Gagal memuat. Cek Tab 'Average Pressure CS'";
+            document.getElementById('loader').innerText = "Gagal memuat data. Periksa tab 'Average Temp' dan 'Average Pressure CS'.";
         }
     }
 
-    function renderCharts(configs, containerId, rawData, labels) {
+    function renderGroup(configs, containerId, rawData, labels) {
         const container = document.getElementById(containerId);
         configs.forEach(item => {
             const card = document.createElement('div');
@@ -91,15 +101,15 @@
                         data: rawData.map(d => parseFloat(Object.values(d)[item.idx]) || 0),
                         borderColor: item.color,
                         backgroundColor: item.color + '11',
-                        fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3
+                        fill: true, tension: 0.4, borderWidth: 2, pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { ticks: { callback: v => v + item.unit } },
-                        x: { ticks: { display: false } } // Sembunyikan tgl agar tidak sesak
+                        y: { ticks: { callback: v => v + item.unit }, grid: { color: '#f0f0f0' } },
+                        x: { ticks: { rotation: 45, font: { size: 9 } } }
                     }
                 }
             });
