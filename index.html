@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cold Storage Monitoring - Production 1</title>
+    <title>Production 1 Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto 20px auto; }
-        .header { background: #1a2a6c; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-        h2 { margin: 0; font-size: 22px; }
-        .loading { text-align: center; font-weight: bold; color: #1a2a6c; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 900px; margin: auto; margin-bottom: 20px; }
+        .header { background: #1a2a6c; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -18,73 +16,56 @@
 <div class="card">
     <div class="header">
         <h2>DAILY ACTIVITY MONITORING</h2>
-        <p style="margin: 5px 0 0;">M RIVALDI EKA SATRIA | PRODUCTION 1</p>
+        <p>M RIVALDI EKA SATRIA | PRODUCTION 1</p>
     </div>
-    <div id="loader" class="loading">Menghubungkan ke Database...</div>
+    <div id="loader" style="text-align:center; padding:20px;">Menyaring data kosong...</div>
     <canvas id="chartSuhu"></canvas>
 </div>
 
-<div class="card">
-    <h3>Hour Meter (HM) Monitoring</h3>
-    <canvas id="chartHM"></canvas>
-</div>
-
 <script>
-    // URL API TERBARU ANDA
     const apiURL = "https://script.google.com/macros/s/AKfycbx8zA7oTztaAwm-o1jtecDFbwiovftMBsSxatcQiPdw6uNiNvPyMThTgOedRxi0OHj6FA/exec";
 
     async function loadData() {
         try {
             const response = await fetch(apiURL);
-            const data = await response.json();
+            const allData = await response.json();
             document.getElementById('loader').style.display = 'none';
 
-            // 1. Ambil data Tab Average Temp
-            const keyTemp = Object.keys(data).find(k => k.trim() === "Average Temp");
-            const rawTemp = data[keyTemp].slice(-7); // 7 hari terakhir
+            // MENGAMBIL TAB "Average Temp"
+            const key = "Average Temp";
+            const rawData = allData[key];
+
+            // PROSES MEMBERSIHKAN DATA (Membuang baris kosong)
+            const cleanData = rawData.filter(row => {
+                const nilai = Object.values(row)[1]; 
+                return nilai !== "" && nilai !== null && nilai !== 0;
+            }).slice(-14); // Ambil 14 hari terakhir yang ada isinya
 
             new Chart(document.getElementById('chartSuhu'), {
                 type: 'line',
                 data: {
-                    labels: rawTemp.map(d => {
-                        let tgl = Object.values(d)[0];
-                        return typeof tgl === 'string' ? tgl.split('T')[0] : tgl;
-                    }),
+                    labels: cleanData.map(d => Object.values(d)[0]), // Ambil Tanggal
                     datasets: [{
-                        label: 'Average Temp (°C)',
-                        data: rawTemp.map(d => Object.values(d)[1]),
+                        label: 'Suhu Rata-rata (°C)',
+                        data: cleanData.map(d => parseFloat(Object.values(d)[1])), // Ambil Angka Suhu
                         borderColor: '#e74c3c',
                         backgroundColor: 'rgba(231, 76, 60, 0.1)',
                         fill: true,
                         tension: 0.3
                     }]
-                }
-            });
-
-            // 2. Ambil data Tab HM & Ampere Average
-            const keyHM = Object.keys(data).find(k => k.trim() === "HM & Ampere Average");
-            const rawHM = data[keyHM].slice(-7);
-
-            new Chart(document.getElementById('chartHM'), {
-                type: 'line',
-                data: {
-                    labels: rawHM.map(d => {
-                        let tgl = Object.values(d)[0];
-                        return typeof tgl === 'string' ? tgl.split('T')[0] : tgl;
-                    }),
-                    datasets: [{
-                        label: 'Running Hours (HM)',
-                        data: rawHM.map(d => Object.values(d)[1]),
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
+                },
+                options: {
+                    scales: {
+                        y: { 
+                            // Mengatur agar skala suhu sesuai dengan data Cold Storage (-20an)
+                            reverse: false 
+                        }
+                    }
                 }
             });
 
         } catch (e) {
-            document.getElementById('loader').innerText = "Koneksi Gagal. Cek kembali Deploy Apps Script Anda.";
+            document.getElementById('loader').innerText = "Gagal memuat. Periksa koneksi.";
         }
     }
     loadData();
